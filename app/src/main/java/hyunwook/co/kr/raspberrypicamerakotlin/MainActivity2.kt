@@ -1,3 +1,4 @@
+/*
 package hyunwook.co.kr.raspberrypicamerakotlin
 
 import android.Manifest
@@ -11,7 +12,7 @@ import android.view.TextureView
 import hyunwook.co.kr.raspberrypicamerakotlin.camera.CameraJava
 import kotlinx.android.synthetic.main.activity_main.*
 
-class MainActivity : AppCompatActivity() {
+class MainActivity2 : AppCompatActivity() {
     private var mBackgroundHandler : Handler? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,16 +30,20 @@ class MainActivity : AppCompatActivity() {
         texture.surfaceTextureListener = textureListener
 
 
- /*       capture.setOnClickListener(View.OnClickListener {
+ */
+/*       capture.setOnClickListener(View.OnClickListener {
             view -> capture();
             true
-        })*/
+        })*//*
+
 
     }
 
-    /*fun capture() {
+    */
+/*fun capture() {
         var buffer : ByteBuffer = image
-    }*/
+    }*//*
+
 
 
 
@@ -59,10 +64,11 @@ class MainActivity : AppCompatActivity() {
 
         override fun onSurfaceTextureAvailable(p0: SurfaceTexture?, p1: Int, p2: Int) {
             //카메라 오픈 텍스쳐뷰가 이용가능한상태가 되면 (초기)
-            CameraJava.Instance.openCamera(this@MainActivity, texture, mBackgroundHandler)
+            CameraJava.Instance.openCamera(this@MainActivity2, texture, mBackgroundHandler)
         }
     }
     companion object {
-        private val TAG = MainActivity::class.java.simpleName
+        private val TAG = MainActivity2::class.java.simpleName
     }
 }
+*/

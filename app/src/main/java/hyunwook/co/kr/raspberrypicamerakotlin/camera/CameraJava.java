@@ -10,6 +10,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
 import android.media.ImageReader;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -41,7 +42,7 @@ public class CameraJava {
 
     private Handler mBackgroundHandler;
 
-    //private ShutterCallback mShutterCallback;
+    private ShutterCallback mShutterCallback;
 
     static final String TAG = CameraJava.class.getSimpleName();
     public static final CameraJava Instance= new CameraJava();
@@ -76,6 +77,15 @@ public class CameraJava {
         imageReader = null;
     }
 
+    private PictureDoneCallback mOnImageAvailableListener = new PictureDoneCallback();
+
+    public void takePicture(ShutterCallback shutter, PictureCallback picCallback) {
+        Log.d(TAG, "takePicture.,..");
+        mShutterCallback = shutter;
+
+        mOnImageAvailableListener.mDelegate = picCallback;
+        //lockFocus();
+    }
     /**
      * 카메라 디바이스 상태변화 얻기.
      * 비동기로 카메라 디바이스 접속 검출
@@ -156,5 +166,23 @@ public class CameraJava {
         }
     }
 
+    private class PictureDoneCallback implements ImageReader.OnImageAvailableListener {
+        private PictureCallback mDelegate;
+
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            if (mDelegate != null) {
+                mDelegate.onPictureTaken(reader.acquireNextImage());
+            }
+        }
+    }
+
+    public interface ShutterCallback {
+        void onShutter();
+    }
+
+    public interface PictureCallback {
+        void onPictureTaken(Image image);
+    }
 
 }

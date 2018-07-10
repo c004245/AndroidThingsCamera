@@ -1,3 +1,4 @@
+/*
 package hyunwook.co.kr.camerakotlinproject.Camera
 
 import android.content.Context
@@ -13,10 +14,11 @@ import android.view.Surface
 import android.view.TextureView
 import android.widget.Toast
 
-/**
+*
  * Created by hyunwook on 2018-04-19.
  * 카메라 관련 처리 코틀린
- */
+
+
 class CameraView {
     private var context: Context? = null //nullable ?
     private var cameraId: String? = null
@@ -73,10 +75,11 @@ class CameraView {
         imageReader = null
     }
 
- /** 카메라 디바이스 상태변화를 얻는다
+* 카메라 디바이스 상태변화를 얻는다
   * 비동기로 카메라 디바이스의 접속을 검출한다
   * CameraDevice.StateCallback 인터페이스
-  */
+
+
 
 
     private val stateCallback = object : CameraDevice.StateCallback() {
@@ -177,3 +180,4 @@ class CameraView {
         fun onPictureTaken(image: Image)
     }
 }
+*/
