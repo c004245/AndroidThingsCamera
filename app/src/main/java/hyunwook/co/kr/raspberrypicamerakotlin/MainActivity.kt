@@ -8,10 +8,8 @@ import android.os.Handler
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.TextureView
-import android.view.View
-import hyunwook.co.kr.camerakotlinproject.Camera.CameraView
+import hyunwook.co.kr.raspberrypicamerakotlin.camera.CameraJava
 import kotlinx.android.synthetic.main.activity_main.*
-import java.nio.ByteBuffer
 
 class MainActivity : AppCompatActivity() {
     private var mBackgroundHandler : Handler? = null
@@ -31,16 +29,16 @@ class MainActivity : AppCompatActivity() {
         texture.surfaceTextureListener = textureListener
 
 
-        capture.setOnClickListener(View.OnClickListener {
+ /*       capture.setOnClickListener(View.OnClickListener {
             view -> capture();
             true
-        })
+        })*/
 
     }
 
-    fun capture() {
+    /*fun capture() {
         var buffer : ByteBuffer = image
-    }
+    }*/
 
 
 
@@ -61,7 +59,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onSurfaceTextureAvailable(p0: SurfaceTexture?, p1: Int, p2: Int) {
             //카메라 오픈 텍스쳐뷰가 이용가능한상태가 되면 (초기)
-            CameraView.Instance.openCamera(this@MainActivity, texture, mBackgroundHandler)
+            CameraJava.Instance.openCamera(this@MainActivity, texture, mBackgroundHandler)
         }
     }
     companion object {
