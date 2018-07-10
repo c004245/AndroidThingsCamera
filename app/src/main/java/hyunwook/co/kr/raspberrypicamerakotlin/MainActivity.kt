@@ -8,8 +8,10 @@ import android.os.Handler
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.TextureView
+import android.view.View
 import hyunwook.co.kr.camerakotlinproject.Camera.CameraView
 import kotlinx.android.synthetic.main.activity_main.*
+import java.nio.ByteBuffer
 
 class MainActivity : AppCompatActivity() {
     private var mBackgroundHandler : Handler? = null
@@ -27,7 +29,19 @@ class MainActivity : AppCompatActivity() {
 
         //기존 블랙아이와 동일하기 SurfaceTexture 이용. (광각 + 카메라 반전)
         texture.surfaceTextureListener = textureListener
+
+
+        capture.setOnClickListener(View.OnClickListener {
+            view -> capture();
+            true
+        })
+
     }
+
+    fun capture() {
+        var buffer : ByteBuffer = image
+    }
+
 
 
     //SurfaceTexture interface.

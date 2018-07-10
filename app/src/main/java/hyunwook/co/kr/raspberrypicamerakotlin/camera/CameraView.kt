@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Context.CAMERA_SERVICE
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
+import android.media.Image
 import android.media.ImageReader
 import android.os.Handler
 import android.util.Log
@@ -30,6 +31,7 @@ class CameraView {
 
     private var mBackgroundHandler : Handler? = null //
 
+    private var mShutterCallback : ShutterCallback? = null
     companion object {
         private val TAG = CameraView::class.java.simpleName
         val Instance = CameraView()
@@ -143,5 +145,35 @@ class CameraView {
         } catch (e: CameraAccessException) {
             Log.d(TAG, "updatePreview error.....");
         }
+    }
+
+    private var mOnImageAvailableListener : PictureDoneCallback = PictureDoneCallback()
+
+    private class PictureDoneCallback: ImageReader.OnImageAvailableListener {
+        var mDelegate: PictureCallback? = null
+
+        override fun onImageAvailable(reader: ImageReader) {
+            if (mDelegate != null) {
+                mDelegate!!.onPictureTaken(reader.acquireNextImage())
+            }
+
+        }
+
+
+    }
+
+    public fun takePicture(shutter: ShutterCallback, picCallback: PictureCallback) {
+        mShutterCallback = shutter
+        mOnImageAvailableListener.mDelegate = picCallback
+//        lockFocus()
+
+    }
+
+    public interface ShutterCallback {
+        fun onShutter()
+    }
+
+    public interface PictureCallback {
+        fun onPictureTaken(image: Image)
     }
 }
