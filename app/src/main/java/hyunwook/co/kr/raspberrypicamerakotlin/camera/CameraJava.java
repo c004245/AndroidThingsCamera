@@ -8,7 +8,10 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -27,6 +30,30 @@ import kotlin.collections.CollectionsKt;
  */
 
 public class CameraJava {
+    /**
+     * Camera state: Showing camera preview.
+     */
+    private static final int STATE_PREVIEW = 0;
+
+    /**
+     * Camera state: Waiting for the focus to be locked.
+     */
+    private static final int STATE_WAITING_LOCK = 1;
+
+    /**
+     * Camera state: Waiting for the exposure to be precapture state.
+     */
+    private static final int STATE_WAITING_PRECAPTURE = 2;
+
+    /**
+     * Camera state: Waiting for the exposure state to be something other than precapture.
+     */
+    private static final int STATE_WAITING_NON_PRECAPTURE = 3;
+
+    /**
+     * Camera state: Picture was taken.
+     */
+    private static final int STATE_PICTURE_TAKEN = 4;
 
     private Context context;
     private String cameraId;
@@ -46,6 +73,12 @@ public class CameraJava {
 
     static final String TAG = CameraJava.class.getSimpleName();
     public static final CameraJava Instance= new CameraJava();
+
+    private int mState = STATE_PREVIEW;
+    public static final int CAMERA_AF_AUTO = CaptureRequest.CONTROL_AF_MODE_AUTO;
+
+    private int mFocusMode = CAMERA_AF_AUTO;
+
 
     public void openCamera(Context context, TextureView textureView, Handler backgroundHandler) {
         this.context = context;
@@ -85,6 +118,141 @@ public class CameraJava {
 
         mOnImageAvailableListener.mDelegate = picCallback;
         //lockFocus();
+    }
+
+    private CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
+        private void process(CaptureResult result) {
+            switch (mState) {
+                case STATE_PREVIEW: {
+                    break;
+                }
+
+                case STATE_WAITING_LOCK: {
+                    Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
+                    if (afState == null) {
+                        captureStillPicture();
+                    } else if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState
+                            || CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState
+                            || CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED == afState
+                            || CaptureRequest.CONTROL_AF_STATE_PASSIVE_FOCUSED == afState
+                            || CaptureRequest.CONTROL_AF_STATE_INACTIVE == afState) {
+
+                        //CONTROL_AE_STATE can be null on some devices.
+                        Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+                        if (aeState == null || aeState == CaptureRequest.CONTROL_AE_STATE_CONVERGED) {
+                            mState = STATE_PICTURE_TAKEN;
+                            captureStillPicture();
+                        } else {
+                            runPrecaptureSequence();
+                        }
+                    }
+                    break;
+                }
+
+                case STATE_WAITING_PRECAPTURE: {
+                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+                    if (aeState == null ||
+                            aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
+                            aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED) {
+                        mState = STATE_WAITING_NON_PRECAPTURE;
+                    }
+
+                    break;
+                }
+                case STATE_WAITING_NON_PRECAPTURE: {
+                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+                    if (aeState == null || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
+                        mState = STATE_PICTURE_TAKEN;
+                        captureStillPicture();
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        @Override
+        public void onCaptureProgressed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureResult partialResult) {
+            process(partialResult);
+        }
+
+        @Override
+        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+            if (request.getTag() == ("FOCUS_TAG")) {
+                captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, null);
+                captureRequestBuilder.setTag("");
+                captureRequest = captureRequestBuilder.build();
+
+                try {
+                    cameraCaptureSession.setRepeatingRequest(captureRequest, mCaptureCallback, mBackgroundHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                process(result);
+            }
+        }
+
+        @Override
+        public void onCaptureFailed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureFailure failure) {
+            if (request.getTag() == "FOCUS_TAG") {
+
+            }
+        }
+
+    };
+
+    private void runPrecaptureSequence() {
+        try {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+            mState = STATE_WAITING_PRECAPTURE;
+            cameraCaptureSession.capture(captureRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+    private void captureStillPicture() {
+        try {
+            if (null == cameraDevice) {
+                return;
+            }
+
+            if (mShutterCallback != null) {
+                mShutterCallback.onShutter();
+            }
+
+            //CaptureRequest.Build take picture.
+            final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder.addTarget(imageReader.getSurface());
+
+            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, mFocusMode);
+
+            //captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(mDisplay))
+
+            CameraCaptureSession.CaptureCallback CaptureCallback = new CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                    unlockFocus();
+                }
+            };
+
+            cameraCaptureSession.stopRepeating();
+            cameraCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void unlockFocus() {
+        try {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+
+            cameraCaptureSession.capture(captureRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
+            mState = STATE_PREVIEW;
+            cameraCaptureSession.setRepeatingRequest(captureRequest, mCaptureCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
     }
     /**
      * 카메라 디바이스 상태변화 얻기.

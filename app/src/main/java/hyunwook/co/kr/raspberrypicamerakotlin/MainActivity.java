@@ -13,6 +13,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.TextureView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 
 import org.jetbrains.annotations.NotNull;
@@ -23,6 +24,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import hyunwook.co.kr.raspberrypicamerakotlin.camera.CameraJava;
+import hyunwook.co.kr.raspberrypicamerakotlin.capture.CaptureView;
+import hyunwook.co.kr.raspberrypicamerakotlin.capture.CaptureViewer;
 
 /**
  * Created by hyunwook on 2018-07-10.
@@ -38,15 +41,24 @@ public class MainActivity extends AppCompatActivity {
     Button captureButton;
 
     Bitmap viewByte;
+    private CaptureViewer captureViewer;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
         setContentView(R.layout.activity_main);
+
 
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+
+        CaptureView captureView = (CaptureView) findViewById(R.id.captureView);
+        captureViewer = captureView;
+
+
 
         textureView = (TextureView) findViewById(R.id.texture);
         textureView.setSurfaceTextureListener(this.textureListener);
@@ -84,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
             ByteBuffer buffer = image.getPlanes()[0].getBuffer();
             byte[] bytes = new byte[buffer.capacity()];
             buffer.get(bytes);
-    
+
             Bitmap picture = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, null);
             FileOutputStream out = null;
 

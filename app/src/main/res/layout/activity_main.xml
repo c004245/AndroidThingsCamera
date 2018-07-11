@@ -32,4 +32,12 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true" android:layout_marginStart="23dp"
         android:layout_toEndOf="@+id/frameLayout" android:text="캡쳐"/>
+
+    <hyunwook.co.kr.raspberrypicamerakotlin.capture.CaptureView
+        android:id="@+id/captureView"
+        android:layout_width="250dp"
+        android:layout_height="250dp"
+        android:layout_below="@+id/capture"
+        android:layout_toRightOf="@+id/frameLayout"
+        android:background="#ff0000"/>
 </RelativeLayout>
