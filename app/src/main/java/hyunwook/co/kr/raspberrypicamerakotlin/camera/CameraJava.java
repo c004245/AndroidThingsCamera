@@ -1,6 +1,7 @@
 package hyunwook.co.kr.raspberrypicamerakotlin.camera;
 
 import android.content.Context;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -23,6 +24,12 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+import hyunwook.co.kr.raspberrypicamerakotlin.Utils;
 import kotlin.collections.CollectionsKt;
 
 /**
@@ -70,6 +77,8 @@ public class CameraJava {
     private Handler mBackgroundHandler;
 
     private ShutterCallback mShutterCallback;
+    private static final double ratioTolerance = 0.1;
+    private static final double maxRatioTolerance = 0.18;
 
     static final String TAG = CameraJava.class.getSimpleName();
     public static final CameraJava Instance= new CameraJava();
@@ -96,9 +105,68 @@ public class CameraJava {
             imageDimension = map.getOutputSizes(SurfaceTexture.class)[2];
 
             manager.openCamera(cameraId, stateCallback, null);
+
+            Size largest = getBestAspectPictureSize(map.getOutputSizes(ImageFormat.JPEG));
+
+            imageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.JPEG, 2);
+            imageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    private Size getBestAspectPictureSize(Size[] supportedPictureSizes) {
+        float targetRatio = Utils.getScreenRatio(context);
+        Size bestSize = null;
+        TreeMap<Double, List<android.util.Size>> diffs = new TreeMap<>();
+
+        //Select supported sizes which ratio is less than ratioTolerance
+        for (android.util.Size size : supportedPictureSizes) {
+            float ratio = (float) size.getWidth() / size.getHeight();
+            double diff = Math.abs(ratio - targetRatio);
+            if (diff < ratioTolerance){
+                if (diffs.keySet().contains(diff)){
+                    //add the value to the list
+                    diffs.get(diff).add(size);
+                } else {
+                    List<android.util.Size> newList = new ArrayList<>();
+                    newList.add(size);
+                    diffs.put(diff, newList);
+                }
+            }
+        }
+
+        //If no sizes were supported, (strange situation) establish a higher ratioTolerance
+        if(diffs.isEmpty()) {
+            for (android.util.Size size : supportedPictureSizes) {
+                float ratio = (float)size.getWidth() / size.getHeight();
+                double diff = Math.abs(ratio - targetRatio);
+                if (diff < maxRatioTolerance){
+                    if (diffs.keySet().contains(diff)){
+                        //add the value to the list
+                        diffs.get(diff).add(size);
+                    } else {
+                        List<android.util.Size> newList = new ArrayList<>();
+                        newList.add(size);
+                        diffs.put(diff, newList);
+                    }
+                }
+            }
+        }
+
+        //Select the highest resolution from the ratio filtered ones.
+        for (Map.Entry entry: diffs.entrySet()){
+            List<?> entries = (List) entry.getValue();
+            for (int i=0; i<entries.size(); i++) {
+                android.util.Size s = (android.util.Size) entries.get(i);
+                if(bestSize == null) {
+                    bestSize = new Size(s.getWidth(), s.getHeight());
+                } else if(bestSize.getWidth() < s.getWidth() || bestSize.getHeight() < s.getHeight()) {
+                    bestSize = new Size(s.getWidth(), s.getHeight());
+                }
+            }
+        }
+        return bestSize;
     }
 
     //카메라 닫기
@@ -117,7 +185,19 @@ public class CameraJava {
         mShutterCallback = shutter;
 
         mOnImageAvailableListener.mDelegate = picCallback;
-        //lockFocus();
+        lockFocus();
+    }
+
+    private void lockFocus() {
+        try {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+            mState = STATE_WAITING_LOCK;
+
+            captureRequest = captureRequestBuilder.build();
+            cameraCaptureSession.capture(captureRequest, mCaptureCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
     }
 
     private CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
