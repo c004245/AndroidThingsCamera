@@ -12,7 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <uses-library android:name="com.google.android.things"/>
+        <!--<uses-library android:name="com.google.android.things"/>-->
         <activity android:name=".MainActivity"
                   android:hardwareAccelerated="true">
 

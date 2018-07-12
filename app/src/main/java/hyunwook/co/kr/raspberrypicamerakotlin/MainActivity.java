@@ -3,11 +3,8 @@ package hyunwook.co.kr.raspberrypicamerakotlin;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
-import android.media.Image;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -15,12 +12,12 @@ import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
 
+import com.gun0912.tedpermission.PermissionListener;
+import com.gun0912.tedpermission.TedPermission;
+
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 import hyunwook.co.kr.raspberrypicamerakotlin.camera.CameraJava;
 
@@ -32,7 +29,13 @@ public class MainActivity extends AppCompatActivity {
 
     private Handler mBackgroundHandler;
     TextureView textureView;
+    private String[] PERMISSION_STORAGE = {
 
+            Manifest.permission.CAMERA,                //카메라
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+
+    };
     static final String TAG = MainActivity.class.getSimpleName();
 
     Button captureButton;
@@ -47,7 +50,24 @@ public class MainActivity extends AppCompatActivity {
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+        final PermissionListener permissionListener = new PermissionListener() {
+            @Override
+            public void onPermissionGranted() {
+                Log.d(TAG, "onPermissionGranted");
+            }
 
+            @Override
+            public void onPermissionDenied(ArrayList<String> deniedPermissions) {
+                Log.d(TAG, "onPermissionDeined");
+            }
+        };
+        int rotation = getWindowManager().getDefaultDisplay().getRotation();
+        Log.d(TAG, "rotate -->" + rotation);
+        TedPermission.with(this)
+                .setPermissionListener(permissionListener)
+                .setDeniedMessage("권한을 거절 한다면 \n현장 동영상 기능을 이용할 수 없습니다. \n\n[설정] -> [권한]을 클릭하셔서 \n모든 권한을 허용해주십시오.")
+                .setPermissions(PERMISSION_STORAGE)
+                .check();
         textureView = (TextureView) findViewById(R.id.texture);
         textureView.setSurfaceTextureListener(this.textureListener);
 
@@ -57,13 +77,14 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 captureButton.setEnabled(false);
                 Log.d(TAG, "click..");
-                CameraJava.Instance.takePicture(shutterCallback, pictureCallback);
+                //CameraJava.Instance.takePicture(shutterCallback, pictureCallback);
+                CameraJava.Instance.takePicture();
 
             }
         });
     }
 
-    final CameraJava.ShutterCallback shutterCallback = new CameraJava.ShutterCallback() {
+  /*  final CameraJava.ShutterCallback shutterCallback = new CameraJava.ShutterCallback() {
         @Override
         public void onShutter() {
             Log.d(TAG, "Shutter Callback for Camera2");
@@ -109,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
-
+*/
     @NotNull
     private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
         @Override

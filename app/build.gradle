@@ -32,4 +32,6 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 
     compileOnly 'com.google.android.things:androidthings:+'
+    compile 'gun0912.ted:tedpermission:2.1.1'
+
 }
